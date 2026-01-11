@@ -20,36 +20,168 @@ You may photograph / scan your handwritten solutions for the theory parts,
 or (preferably) type them up as part of a Jupyter notebook that you print to PDF.
 
 
-#### Exercise 1: Evaluating polynomials
+### Exercise 1: Evaluating polynomials
 
 Consider the polynomial function
 
-$$p(a, x) = a_0 + a_1 x + \cdots + a_n x^n. $$
+$$
+p(a, x) = a_0 + a_1 x + \cdots + a_n x^n
+$$
 
-1. Write a function `poly_eval(a, x)` to evaluate $p(a, x)$ in the naive way by just summing the terms
+**Problem 1:**
+
+Write a function `poly_eval(a, x)` to evaluate $p(a, x)$ in the naive way by just summing the terms
 as written. This should accept the coefficients $a_0, \ldots, a_n$ as a vector.
 
-2. The **Horner method** is an alternative evaluation algorithm in which no
+**Answer:**
+
+```julia
+function p(a, x)
+    sum = 0.0
+   for (index, a_item) in pairs(a)
+        sum += a_item * x^(index - 1)
+    end
+    return sum
+end
+
+a = [1, 2, 3, 4]
+x = 0.5
+p(a, x)
+```
+
+**Problem 2:**
+
+The **Horner method** is an alternative evaluation algorithm in which no
 powers of $x$ are (explicitly) calculated.
 
-    For example, for a quadratic
-    $p(x) = a_2 x^2 + a_1 x + a_0$ we have
-    $p(x) = a_0 + x(a_1 + a_2 x)$
+For example, for a quadratic
+$p(x) = a_2 x^2 + a_1 x + a_0$ we have
+$p(x) = a_0 + x(a_1 + a_2 x)$
 
-    Generalise this to polynomials of degree $3$ and then degree $n$
+Generalise this to polynomials of degree $3$ and then degree $n$
 
-3. Implement this as a function `horner(a, x)`.
+**Answer:**
 
-4. Test `horner` to make sure it gives the same result as `poly_eval`.
+For polynomials of degree $3$,
 
-4. Benchmark the two methods to evaluate the polynomial $p(a, x) = 1 + 2x + 3x^2 + \cdots + 10x^{10}$.
+$$
+p(x) = a_0 + x[a_1 + x(a_2 + a_3x)]
+$$
+
+For polynomials of degree $n$
+
+$$
+p(x) = a_0 + x(a_1 + x(a_2 + x(a_3 + x(\cdots + x(a_{n-1} + a_n x)))))
+$$
+
+**Problem 3:**
+
+Implement this as a function `horner(a, x)`.
+
+**Answer:**
+
+Express the formula in a more uniform way
+
+$$
+p(x) = a_0 + x(a_1 + x(a_2 + x(a_3 + x(\cdots + x(a_{n-1} + x(a_n + 0))))))
+$$
+
+Then we can use for-loop to calculate this easily
+
+```julia
+function horner(a, x)
+    res = 0.0
+    for a_item in Iterators.reverse(a)
+        res = a_item + x * res
+    end
+    return res
+end
+
+horner(a, x)
+```
+
+**Problem 4:**
+
+Test `horner` to make sure it gives the same result as `poly_eval`.
+
+**Answer:**
+
+```julia
+for x in 0:0.01:10
+    horner_res = horner(a, x)
+    p_res = p(a, x)
+    if !isapprox(horner_res, p_res)
+        error("Different result! Horner result is: $(horner_res), p res is: $(p_res)")
+    end
+end
+println("Same Results in 0:0.01:10")
+```
+
+**Problem 5:**
+
+Benchmark the two methods to evaluate the polynomial $p(a, x) = 1 + 2x + 3x^2 + \cdots + 10x^{10}$.
 Which algorithm is more efficient and by how much?
 
-5. Count (approximately) the number of operations required by each of the two algorithms.
-Does this agree with your benchmarks? (Feel free to perform
-        more benchmarks to check this, e.g. using polynomials with random coefficients.)
+**Answer:**
 
+```julia
+using BenchmarkTools
+a = collect(1:10)
+b_hor = @benchmark horner(a, 1)
+b_p = @benchmark p(a, 1)
+println("Horner: ", minimum(b_hor).time)
+println("Naive: ", minimum(b_p).time)
+```
 
+The Horner method is more efficient by almost a half
+
+**Problem 6:**
+
+Count (approximately) the number of operations required by each of the two algorithms.
+Does this agree with your benchmarks? (Feel free to perform more benchmarks to check this, e.g. using polynomials with random coefficients.)
+
+**Answer:**
+
+With the naive way, for each item in the vector `a`, we have to do summation and multiplication,
+the number of multiplacation depends on the order.
+Thus the number of operations required is
+
+$$
+1 + 2 + 3 + \cdots + (n + 1) = \frac{(n + 2)(n + 1)}{2} = \Theta(n^2)
+$$
+
+Or maybe power computation is of order $\Theta(log n)$
+
+With the Horner method, for each item we just have to do one multiplication and summation.
+Thus the number of operations required is
+
+$$
+\Theta(n) = n
+$$
+
+To check this, consider `a` which has large enough length
+
+```julia
+using Plots
+
+function run_times(f, a_maxlen, x)
+    res_vec = []
+    for len in 1:a_maxlen
+        a = collect(1:len)
+        b = @benchmark $f($a, $x)
+        push!(res_vec, minimum(b).time)
+    end
+    return res_vec
+end
+
+a_maxlen = 50
+x = 0.5
+p_vec = run_times(p, a_maxlen, x)
+horner_vec = run_times(horner, a_maxlen, x)
+
+scatter(p_vec, label="Naive Method", xlabel="Length of a", ylabel="time (ns)")
+scatter!(horner_vec, label="Horner Method")
+```
 
 #### Exercise 2: Calculating $\sqrt{y}$
 
