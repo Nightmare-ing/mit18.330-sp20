@@ -1,0 +1,35 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "jmd2md",
+      "type": "shell",
+      "command": "julia",
+      "args": [
+        "--project=.",
+        "-e",
+        "using Weave; Weave.weave(ENV[\"JMD_IN\"], out_path=\"$(pwd())/build\", doctype=\"pandoc\")"
+      ],
+      "options": {
+        "env": {
+          "JMD_IN": "${file}"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}
