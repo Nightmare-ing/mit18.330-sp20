@@ -1,14 +1,12 @@
 ---
 theme: Antibes
 mainfont: Helvetica
-monofont: 'Source Code Pro'
-monofontoptions: 'Scale=0.6'
-
+monofont: "Source Code Pro"
+monofontoptions: "Scale=0.6"
 
 header-includes: |
-    \usepackage{unicode-math}
+  \usepackage{unicode-math}
 ---
-
 
 # 18.330 Problem set 1 (spring 2020)
 
@@ -18,7 +16,6 @@ The questions are a mixture of hand / analytical calculation
 and numerical calculation using Julia. You should submit a PDF file.
 You may photograph / scan your handwritten solutions for the theory parts,
 or (preferably) type them up as part of a Jupyter notebook that you print to PDF.
-
 
 ### Exercise 1: Evaluating polynomials
 
@@ -174,7 +171,7 @@ function run_times(f, a_maxlen, x)
     return res_vec
 end
 
-a_maxlen = 50
+a_maxlen = 10
 x = 0.5
 p_vec = run_times(p, a_maxlen, x)
 horner_vec = run_times(horner, a_maxlen, x)
@@ -183,50 +180,197 @@ scatter(p_vec, label="Naive Method", xlabel="Length of a", ylabel="time (ns)")
 scatter!(horner_vec, label="Horner Method")
 ```
 
-#### Exercise 2: Calculating $\sqrt{y}$
+### Exercise 2: Calculating $\sqrt{y}$
 
 The Babylonian algorithm for calculating $x = \sqrt{y}$ is the following iteration:
 
-$$x_{n+1    } = \frac{1}{2} \left( x_n + \frac{y}{x_n} \right).$$
+$$
+x_{n+1} = \frac{1}{2} \left( x_n + \frac{y}{x_n} \right)
+$$
 
-1. *Suppose* that $x_n$ converges to some limiting value $x^*$ as $n \to \infty$. Show that
+**Problem 1:**
+
+_Suppose_ that $x_n$ converges to some limiting value $x^*$ as $n \to \infty$. Show that
 then we must have $x^* = \sqrt{y}$.
 
-2. To show that it does, in fact, converge, suppose (without loss of generality)
-that $x_0 < \sqrt{y}$.
+**Answer:**
 
-    Show that we then have $x_n < x_{n+1} < y_{n+1} < y_n$ for all $n$. Hence
-the $x_n$ form an increasing sequence that is bounded above, and hence they converge.
-(This is a [theorem](https://en.wikipedia.org/wiki/Monotone_convergence_theorem)
-that we will just assume for this course.)
+$$
+\lim_{n \to \infty} x_{n + 1} = \lim_{n \to \infty} \frac{1}{2} (x_n + \frac{y}{x_n})
+$$
 
-3. Write a function `babylon` that implements this algorithm. It takes
-a tolerance $\epsilon$ and iterates until the residual is $< \epsilon$.
-It should return the sequence $(x_n)$.
+Because
 
-4. Test your function to make sure it gives the correct result.
+$$
+\lim_{n \to \infty} x_{n + 1} = \lim_{n \to \infty} x_{n} = x^*
+$$
 
-5. Use rational initial values to convince yourself that calculating with rationals
- is a bad idea
+then
+
+$$
+x^* = \frac{1}{2} (x^* + \frac{y}{x^*}) \implies x^* = \sqrt{y}
+$$
+
+**Problem 2:**
+
+To show that it does, in fact, converge, suppose (without loss of generality) that $x_0 < \sqrt{y}$.
+
+Show that we then have $x_n < x_{n+1} < y$ for all $n$. Hence the $x_n$ form an increasing sequence that is bounded above, and hence they converge.
+(This is a [theorem](https://en.wikipedia.org/wiki/Monotone_convergence_theorem) that we will just assume for this course.)
+
+**Answer:**
+
+If $x_n > \sqrt{y}$, then
+
+$$
+x_{n + 1} = \frac{1}{2}(\frac{y}{x_n} + x_n) > \sqrt{y}
+$$
+
+We know $x_0 < \sqrt{y}$, then
+
+$$
+x_1 = \frac{1}{2}(\frac{y}{x_0} + x_0) > \sqrt{y}
+$$
+
+Then $x_n > \sqrt{y}$ for $n \geq 2$. Consider
+
+$$
+x_{n + 1} - x_n = \frac{1}{2} (\frac{y}{x_n} - x_n) < 0 \implies x_{n + 1} < x_n
+$$
+
+Thus $\sqrt{y} < x_{n + 1} < x_n$, and $x_n$ converges.
+
+So there's an error in the problem, $x_n$ decreases since $n \geq 2$, but always greater than $\sqrt{y}$
+
+**Problem 3:**
+
+Write a function `babylon` that implements this algorithm. It takes a tolerance $\epsilon$ and iterates
+until the residual is $< \epsilon$. It should return the sequence $(x_n)$.
+
+**Answer:**
+
+```julia
+function babylon(y, ϵ)
+    xs = [Float64(y)]
+    while true
+        x_curr = 1 / 2 * (xs[end] + y / xs[end])
+        if abs(x_curr - xs[end]) < ϵ
+            break
+        end
+        push!(xs, x_curr)
+    end
+    return xs
+end
+```
+
+**Problem 4:**
+
+Test your function to make sure it gives the correct result.
+
+**Answer:**
+
+```julia
+passFlag = true
+for i in 1:20
+    if !isapprox(sqrt(i), babylon(i, 1e-6)[end], atol=1e-6)
+        error("Failed test with $(i): $(sqrt(i)), $(babylon(i, 1e-5)[end])")
+        passFlag = false
+        break
+    end
+end
+
+if passFlag
+    println("PASS ALL TESTS!")
+end
+```
+
+**Problem 5:**
+
+Use rational initial values to convince yourself that calculating with rationals is a bad idea
 and that floating point is a good compromise.
 
-6. Let $\delta_n := x_n - x^{*}$ be the distance of $x_n$ from the limiting
-value $\sqrt{y}$. (You may use Julia's built-in `sqrt` function, or take the last
-data value as the limit.)
+**Answer:**
 
-7. Plot the (absolute value of) $\delta_n$ as a function of $n$ on a suitable combination of linear
-and log scales. How fast does it seem to be converging?
+```julia
+function rationalBabylon(y, ϵ)
+    xs = [y]
+    while true
+        x_curr = 1 / 2 * (xs[end] + y / xs[end])
+        if abs(x_curr - xs[end]) < ϵ
+            break
+        end
+        push!(xs, x_curr)
+    end
+    return xs
+end
 
-8. Compare this on the same plot to the bisection algorithm from class.
-Which is better?
+rationalBabylon(3 // 4, 1e-2)
+```
 
-9. With $\delta_n$ defined as in [6.], show that $\delta_{n+1} \simeq \delta_n^2$
-($\simeq$ means "is approximately equal to").
+**Problem 6:**
 
-    Hint: you may need to use a Taylor series expansion; if so you should
-    calculate this (by hand).
+For rational initial values, we can only reach $1 \times 10^{-2}$, if we reach precision $1 \times 10^{-3}$, we'll get overflow error.
 
+Let $\delta_n := x_n - x^{*}$ be the distance of $x_n$ from the limiting value $\sqrt{y}$. (You may use Julia's built-in `sqrt` function, or take the last data value as the limit.)
 
+Plot the (absolute value of) $\delta_n$ as a function of $n$ on a suitable combination of linear and log scales. How fast does it seem to be converging?
+
+**Answer:**
+
+```julia
+y = 2
+δ_n = abs.(babylon(y, 1e-10) .- sqrt(y))
+p1 = scatter(δ_n)
+p2 = scatter(δ_n, yscale=:log10)
+plot(p1, p2, layout=(1, 2))
+```
+
+It seems to converge with
+
+$$
+\log_{10}\delta_n = a x^2 + bx + c \implies \delta_n = e^{Ax^2 + Bx + C}
+$$
+
+**Problem 7:**
+
+Compare this on the same plot to the bisection algorithm from class. Which is better?
+
+This one is better, because in the log scale, the bisection algorithm converges at a linear scale.
+For Babylon algorithm, it converges at a quadratic scale.
+
+**Problem 8:**
+
+With $\delta_n$ defined as in Problem 6, show that $\delta_{n+1} \simeq \delta_n^2$ ($\simeq$ means "is approximately equal to").
+
+Hint: you may need to use a Taylor series expansion; if so you should calculate this (by hand).
+
+Replace $x_n$ and $x_{n + 1}$ in the iteration with the following formula
+
+$$
+x_n = \delta_n + x^*
+$$
+
+Then
+
+$$
+\delta_{n + 1} + x^* = \frac{1}{2}\left(\delta_n + x^* + \frac{y}{\delta_n + x^*}\right)
+$$
+
+We know $x^* = \sqrt{y}$, thus
+
+$$
+\begin{align*}
+\delta_{n + 1} + x^* = \frac{1}{2}\left(\delta_n + x^* + \frac{x^{*2}}{\delta_n + x^*}\right) \\
+\delta_{n + 1} = \frac{1}{2} \left(\delta_n - x^* + \frac{x^{*2}}{\delta_n + x^*}\right) \\
+\implies \delta_{n + 1} = \frac{1}{2} \frac{\delta_n^2}{\delta_n + x^*}
+\end{align*}
+$$
+
+As $n \to \infty$, $\delta_n \to 0$, thus
+
+$$
+\delta_{n + 1} = \frac{1}{2x^*} \delta_n^2 \implies \delta_{n + 1} \simeq \delta_n^2
+$$
 
 #### Exercise 3: Collision of two discs
 
@@ -238,94 +382,88 @@ and $\mathbf{x}_2$, with velocities $\mathbf{v}_1$ and $\mathbf{v}_2$,
 respectively. The discs each have radius $r$.
 
 1. Find an expression for the condition that the discs collide (i.e. are touching)
-at time $t$, involving the distance between their centres.
+   at time $t$, involving the distance between their centres.
 
 2. Rewrite your expression from [1.] as a quadratic equation for the time $t$.
-How many real solutions may this equation have?
-What do different numbers of solutions of this equation correspond to physically?
+   How many real solutions may this equation have?
+   What do different numbers of solutions of this equation correspond to physically?
 
 3. Write a function `collision` that takes all the data and calculates the
-collision time by using the quadratic formula.
-Make sure you take account of the answer to [2.]
+   collision time by using the quadratic formula.
+   Make sure you take account of the answer to [2.]
 
 4. Check that your code works by setting up some combinations of discs
-where you can do the calculation by hand (e.g. both discs moving
-    at a 45-degree angle).
-
+   where you can do the calculation by hand (e.g. both discs moving
+   at a 45-degree angle).
 
 #### Exercise 4: Evaluating elementary functions
 
 1. Implement the degree-$N$ Taylor polynomial approximation $\exp_N(x)$
-for $\exp(x)$ around $x=0$.
-Make sure that you do *not* explicitly calculate factorials in your code.
+   for $\exp(x)$ around $x=0$.
+   Make sure that you do _not_ explicitly calculate factorials in your code.
 
 2. Make an interactive visualization using the `Interact.jl` package,
-showing $\exp_N$ and $\exp$ as $N$ varies.
+   showing $\exp_N$ and $\exp$ as $N$ varies.
 
 3. Make another visualization showing the **truncation error**, i.e. $\exp(x) - \exp_N(x)$.
-How does it behave?
+   How does it behave?
 
 4. Calculate a bound for the truncation error using the Lagrange remainder.
- Use [Stirling's approximation](https://en.wikipedia.org/wiki/Stirling%27s_approximation)
-to estimate how many terms you need to take for the error to be of a certain size
-$\epsilon$.
+   Use [Stirling's approximation](https://en.wikipedia.org/wiki/Stirling%27s_approximation)
+   to estimate how many terms you need to take for the error to be of a certain size
+   $\epsilon$.
 
 5. Implement **range reduction** for the exponential function: instead of blindly applying
-a Taylor expansion (which will require many terms for large $x$),
-calculate $\exp(x)$ by reducing to the calculation of $\exp(r)$ for $r \in [-0.5, 0.5]$
-using the relation
+   a Taylor expansion (which will require many terms for large $x$),
+   calculate $\exp(x)$ by reducing to the calculation of $\exp(r)$ for $r \in [-0.5, 0.5]$
+   using the relation
 
 $$\exp(2x) = \exp(x)^2.$$
 
 6. Make an interactive visualization of the Taylor polynomial approximation to
-$\log(1+x)$, showing visually that it fails outside a certain interval. Which
-interval is that, and why?
-
+   $\log(1+x)$, showing visually that it fails outside a certain interval. Which
+   interval is that, and why?
 
 #### Exercise 5: Exactly representing irrationals using symbolic computing
 
 Here we will represent certain real numbers in the computer
-*exactly*. Effectively we will use a type of *symbolic* computation, in which we explicitly keep
+_exactly_. Effectively we will use a type of _symbolic_ computation, in which we explicitly keep
 the symbol $\sqrt{2}$, rather than approximating it by a floating-point number.
 
 (Although this is not really the subject of the course, it's useful to remember
 that there is a whole world of symbolic computation that can be applied to
-certain problems, and that with a bit of work you often *do not need* an expensive
- commercial tool to do this!)
-
-
+certain problems, and that with a bit of work you often _do not need_ an expensive
+commercial tool to do this!)
 
 Consider the subset of the real numbers given by $S := \{a + b\sqrt{2}: a, b \in \mathbb{Q} \}$,
-    i.e. the set of numbers of the form $a + b\sqrt{2}$ where $a$ and $b$ are rational.
-
+i.e. the set of numbers of the form $a + b\sqrt{2}$ where $a$ and $b$ are rational.
 
 1. Write down formulae for the sum, difference and product of $a_1 + b_1\sqrt{2}$
-    and $a_2 + b_2 \sqrt{2}$, showing that the results are in $S$.
+   and $a_2 + b_2 \sqrt{2}$, showing that the results are in $S$.
 
 2. Show that $1 / (a + \sqrt{b})$ is also in $S$ by supposing that it
-    equals $c + d \sqrt{2}$ and finding explicit equations for $c$ and $d$.
-    What type of equations are they? Solve them to find explicit values for $c$ and $d$
-    in terms of $a$ and $b$.
+   equals $c + d \sqrt{2}$ and finding explicit equations for $c$ and $d$.
+   What type of equations are they? Solve them to find explicit values for $c$ and $d$
+   in terms of $a$ and $b$.
 
-    [This shows that we can also do division (by non-zero elements) and remain
-    within the set, i.e. that $S$ is a **field**, namely an **extension field** of
-    $\mathbb{Q}$. ]
+   [This shows that we can also do division (by non-zero elements) and remain
+   within the set, i.e. that $S$ is a **field**, namely an **extension field** of
+   $\mathbb{Q}$. ]
 
 3. Define a type `FieldExtension` to represent these number pairs, and
-    the corresponding operations. Also define a `show` method to print them nicely
-    using a `√` symbol (typed as `\sqrt<TAB>`).
+   the corresponding operations. Also define a `show` method to print them nicely
+   using a `√` symbol (typed as `\sqrt<TAB>`).
 
 4. [Extra credit]: What happens if you adjoin $\sqrt{2}$ and $\sqrt{3}$?
-    Find formulae to represent $1 / (1 + \sqrt{2} + \sqrt{3})$ as elements of the
-    corresponding set.
-
+   Find formulae to represent $1 / (1 + \sqrt{2} + \sqrt{3})$ as elements of the
+   corresponding set.
 
 ## Some Julia tips
 
 ### Package installation
 
 A package such as `BenchmarkTools` may be installed
-by running the following code a *single* time (only once in your
+by running the following code a _single_ time (only once in your
 current Julia installation):
 
 ```julia
@@ -364,8 +502,8 @@ Note that any variables you pass in must be given `$` signs like this.
 The `Plots.jl` package is used as follows after loading it with `using Plots`:
 
 - `plot(x, y)`: plots the data with given $x$ coordinates and $y$ coordinates,
-joining those points with lines.
-These should be vectors.
+  joining those points with lines.
+  These should be vectors.
 
 - `plot(y)`: specifying only one argument plots the data against the numbers $1, 2, \ldots$
 
@@ -376,7 +514,7 @@ These should be vectors.
 - `scatter`: plots points instead of lines
 
 - Add `yscale=:log10` inside the plotting command to use a logarithmic scale
-on the $y$ axis.
+  on the $y$ axis.
 
 Note that there are small delays when first loading the package and for the first plot.
 Later plots will be quick.
@@ -387,7 +525,6 @@ The `Interact.jl` package enables us to generate simple interactive visualizatio
 using a slider (and some other "widgets").
 
 To generate a single slider, wrap a `for` loop in the `@manipulate` macro, e.g.
-
 
 ```julia
 @manipulate for i in 1:10
