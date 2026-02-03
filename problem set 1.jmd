@@ -10,6 +10,11 @@ header-includes: |
 
 # 18.330 Problem set 1 (spring 2020)
 
+```julia; results = "hidden"
+ENV["GKS_WSTYPE"] = "nul"
+using Plots, LaTeXStrings, BenchmarkTools, LinearAlgebra
+```
+
 ## Submission deadline: 11:59pm on Monday, February 10
 
 The questions are a mixture of hand / analytical calculation
@@ -17,7 +22,7 @@ and numerical calculation using Julia. You should submit a PDF file.
 You may photograph / scan your handwritten solutions for the theory parts,
 or (preferably) type them up as part of a Jupyter notebook that you print to PDF.
 
-### Exercise 1: Evaluating polynomials
+## Exercise 1: Evaluating polynomials
 
 Consider the polynomial function
 
@@ -25,14 +30,14 @@ $$
 p(a, x) = a_0 + a_1 x + \cdots + a_n x^n
 $$
 
-**Problem 1:**
+### Problem 1
 
 Write a function `poly_eval(a, x)` to evaluate $p(a, x)$ in the naive way by just summing the terms
 as written. This should accept the coefficients $a_0, \ldots, a_n$ as a vector.
 
 **Answer:**
 
-```julia
+```julia; results = "hidden"
 function p(a, x)
     sum = 0.0
    for (index, a_item) in pairs(a)
@@ -40,13 +45,15 @@ function p(a, x)
     end
     return sum
 end
+```
 
+```julia
 a = [1, 2, 3, 4]
 x = 0.5
 p(a, x)
 ```
 
-**Problem 2:**
+### Problem 2
 
 The **Horner method** is an alternative evaluation algorithm in which no
 powers of $x$ are (explicitly) calculated.
@@ -71,7 +78,7 @@ $$
 p(x) = a_0 + x(a_1 + x(a_2 + x(a_3 + x(\cdots + x(a_{n-1} + a_n x)))))
 $$
 
-**Problem 3:**
+### Problem 3
 
 Implement this as a function `horner(a, x)`.
 
@@ -85,7 +92,7 @@ $$
 
 Then we can use for-loop to calculate this easily
 
-```julia
+```julia; results = "hidden"
 function horner(a, x)
     res = 0.0
     for a_item in Iterators.reverse(a)
@@ -93,11 +100,13 @@ function horner(a, x)
     end
     return res
 end
+```
 
+```julia
 horner(a, x)
 ```
 
-**Problem 4:**
+### Problem 4
 
 Test `horner` to make sure it gives the same result as `poly_eval`.
 
@@ -114,7 +123,7 @@ end
 println("Same Results in 0:0.01:10")
 ```
 
-**Problem 5:**
+### Problem 5
 
 Benchmark the two methods to evaluate the polynomial $p(a, x) = 1 + 2x + 3x^2 + \cdots + 10x^{10}$.
 Which algorithm is more efficient and by how much?
@@ -122,7 +131,6 @@ Which algorithm is more efficient and by how much?
 **Answer:**
 
 ```julia
-using BenchmarkTools
 a = collect(1:10)
 b_hor = @benchmark horner(a, 1)
 b_p = @benchmark p(a, 1)
@@ -132,7 +140,7 @@ println("Naive: ", minimum(b_p).time)
 
 The Horner method is more efficient by almost a half
 
-**Problem 6:**
+### Problem 6
 
 Count (approximately) the number of operations required by each of the two algorithms.
 Does this agree with your benchmarks? (Feel free to perform more benchmarks to check this, e.g. using polynomials with random coefficients.)
@@ -158,9 +166,7 @@ $$
 
 To check this, consider `a` which has large enough length
 
-```julia
-using Plots
-
+```julia; results = "hidden"
 function run_times(f, a_maxlen, x)
     res_vec = []
     for len in 1:a_maxlen
@@ -170,7 +176,9 @@ function run_times(f, a_maxlen, x)
     end
     return res_vec
 end
+```
 
+```julia
 a_maxlen = 10
 x = 0.5
 p_vec = run_times(p, a_maxlen, x)
@@ -180,7 +188,7 @@ scatter(p_vec, label="Naive Method", xlabel="Length of a", ylabel="time (ns)")
 scatter!(horner_vec, label="Horner Method")
 ```
 
-### Exercise 2: Calculating $\sqrt{y}$
+## Exercise 2: Calculating $\sqrt{y}$
 
 The Babylonian algorithm for calculating $x = \sqrt{y}$ is the following iteration:
 
@@ -188,7 +196,7 @@ $$
 x_{n+1} = \frac{1}{2} \left( x_n + \frac{y}{x_n} \right)
 $$
 
-**Problem 1:**
+### Problem 1
 
 _Suppose_ that $x_n$ converges to some limiting value $x^*$ as $n \to \infty$. Show that
 then we must have $x^* = \sqrt{y}$.
@@ -211,7 +219,7 @@ $$
 x^* = \frac{1}{2} (x^* + \frac{y}{x^*}) \implies x^* = \sqrt{y}
 $$
 
-**Problem 2:**
+### Problem 2
 
 To show that it does, in fact, converge, suppose (without loss of generality) that $x_0 < \sqrt{y}$.
 
@@ -242,14 +250,14 @@ Thus $\sqrt{y} < x_{n + 1} < x_n$, and $x_n$ converges.
 
 So there's an error in the problem, $x_n$ decreases since $n \geq 2$, but always greater than $\sqrt{y}$
 
-**Problem 3:**
+### Problem 3
 
 Write a function `babylon` that implements this algorithm. It takes a tolerance $\epsilon$ and iterates
 until the residual is $< \epsilon$. It should return the sequence $(x_n)$.
 
 **Answer:**
 
-```julia
+```julia; results = "hidden"
 function babylon(y, ϵ)
     xs = [Float64(y)]
     while true
@@ -263,7 +271,7 @@ function babylon(y, ϵ)
 end
 ```
 
-**Problem 4:**
+### Problem 4
 
 Test your function to make sure it gives the correct result.
 
@@ -284,14 +292,14 @@ if passFlag
 end
 ```
 
-**Problem 5:**
+### Problem 5
 
 Use rational initial values to convince yourself that calculating with rationals is a bad idea
 and that floating point is a good compromise.
 
 **Answer:**
 
-```julia
+```julia; results = "hidden"
 function rationalBabylon(y, ϵ)
     xs = [y]
     while true
@@ -303,11 +311,13 @@ function rationalBabylon(y, ϵ)
     end
     return xs
 end
+```
 
+```julia
 rationalBabylon(3 // 4, 1e-2)
 ```
 
-**Problem 6:**
+### Problem 6
 
 For rational initial values, we can only reach $1 \times 10^{-2}$, if we reach precision $1 \times 10^{-3}$, we'll get overflow error.
 
@@ -331,14 +341,14 @@ $$
 \log_{10}\delta_n = a x^2 + bx + c \implies \delta_n = e^{Ax^2 + Bx + C}
 $$
 
-**Problem 7:**
+### Problem 7
 
 Compare this on the same plot to the bisection algorithm from class. Which is better?
 
 This one is better, because in the log scale, the bisection algorithm converges at a linear scale.
 For Babylon algorithm, it converges at a quadratic scale.
 
-**Problem 8:**
+### Problem 8
 
 With $\delta_n$ defined as in Problem 6, show that $\delta_{n+1} \simeq \delta_n^2$ ($\simeq$ means "is approximately equal to").
 
@@ -372,7 +382,7 @@ $$
 \delta_{n + 1} = \frac{1}{2x^*} \delta_n^2 \implies \delta_{n + 1} \simeq \delta_n^2
 $$
 
-### Exercise 3: Collision of two discs
+## Exercise 3: Collision of two discs
 
 In this question we will finally find an actual use case for solving a quadratic equation!
 
@@ -380,7 +390,7 @@ Suppose we have two discs located at positions $\mathbf{x}_1$
 and $\mathbf{x}_2$, with velocities $\mathbf{v}_1$ and $\mathbf{v}_2$,
 respectively. The discs each have radius $r$.
 
-**Problem 1:**
+### Problem 1
 
 Find an expression for the condition that the discs collide (i.e. are touching)
 at time $t$, involving the distance between their centres.
@@ -391,7 +401,7 @@ $$
 \lvert (\mathbf{x}_1 + t \mathbf{v}_1) - (\mathbf{x}_2 + t \mathbf{v}_2) \rvert = 2r
 $$
 
-**Problem 2:**
+### Problem 2
 
 Rewrite your expression from Problem 1 as a quadratic equation for the time $t$.
 How many real solutions may this equation have?
@@ -420,15 +430,14 @@ If there are two real solutions, it means the discs collide and then continue to
 If there is one real solution, it means the discs just touch at one point and then separate.
 If there is no real solution, it means the discs never collide.
 
-**Problem 3:**
+### Problem 3
 
 Write a function `collision` that takes all the data and calculates the collision time by using the quadratic formula.
 Make sure you take account of the answer to Problem 2.
 
 **Answer:**
 
-```julia
-using LinearAlgebra
+```julia; results = "hidden"
 function collision(x1, x2, v1, v2, r)
     a = (v1 - v2) ⋅ (v1 - v2)
     b = 2 * (v1 - v2) ⋅ (x1 - x2)
@@ -456,16 +465,16 @@ println(collision([0.0, 2.0], [6.0, 0.0], [0.0, 0.0], [-1.0, 0.0], 1))
 println(collision([0.0, 0.0], [6.0, 0.0], [0.0, 1.0], [0.0, 1.0], 1))
 ```
 
-### Exercise 4: Evaluating elementary functions
+## Exercise 4: Evaluating elementary functions
 
-**Problem 1:**
+### Problem 1
 
 Implement the degree-$N$ Taylor polynomial approximation $\exp_N(x)$ for $\exp(x)$ around $x=0$.
 Make sure that you do _not_ explicitly calculate factorials in your code.
 
 **Answer:**
 
-```julia
+```julia; results = "hidden"
 function exp_N(x, N)
     sum = 1.0
     item = 1.0
@@ -477,7 +486,7 @@ function exp_N(x, N)
 end
 ```
 
-**Problem 2:**
+### Problem 2
 
 Make an interactive visualization using the `Interact.jl` package,
 showing $\exp_N$ and $\exp$ as $N$ varies.
@@ -498,7 +507,7 @@ begin
 end
 ```
 
-**Problem 3:**
+### Problem 3
 
 Make another visualization showing the **truncation error**, i.e. $\exp(x) - \exp_N(x)$.
 How does it behave?
@@ -509,7 +518,7 @@ How does it behave?
 plot(xs, x -> exp(x) - exp_N(x, N), label=L"\exp - \exp_N")
 ```
 
-**Problem 4:**
+### Problem 4
 
 Calculate a bound for the truncation error using the Lagrange remainder.
 Use [Stirling's approximation](https://en.wikipedia.org/wiki/Stirling%27s_approximation)
@@ -544,7 +553,7 @@ $$
 \frac{e^{x}}{(n + 1)!} x^{n + 1} < \epsilon
 $$
 
-**Problem 5:**
+### Problem 5
 
 Implement **range reduction** for the exponential function: instead of blindly applying a
 Taylor expansion (which will require many terms for large $x$), calculate $\exp(x)$ by
@@ -562,7 +571,7 @@ $$
 
 Thus we can implement `exp_reduction` as follows
 
-```julia
+```julia; results = "hidden"
 function exp_reduction(x, N)
     k = 0.0
     if x > 0.5 || x < -0.5
@@ -576,7 +585,6 @@ end
 And we can compare this with `exp_N`
 
 ```julia
-using Plots, LaTeXStrings
 N = 3
 xs = -5:0.01:5
 plot(xs, x -> exp_N(x, N), label=L"\exp_N")
@@ -585,7 +593,7 @@ plot!(xs, exp, label=L"\exp")
 ylims!(0, 30)
 ```
 
-**Problem 6:**
+### Problem 6
 
 Make an interactive visualization of the Taylor polynomial approximation to $\log(1+x)$, showing visually that it fails outside a certain interval. Which interval is that, and why?
 
@@ -597,7 +605,7 @@ $$
 \log(1 + x) = x - \frac{x^2}{2} + \frac{x^3}{3} - \frac{x^4}{4} + \cdots
 $$
 
-```julia
+```julia; results = "hidden"
 function log_N(x, N)
     item = x
     sum = x
@@ -607,7 +615,9 @@ function log_N(x, N)
     end
     return sum
 end
+```
 
+```julia
 N = 7
 ys = -1:0.01:1
 plot(ys, x -> log_N(x, N), label=L"\log_N")
