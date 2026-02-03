@@ -10,7 +10,7 @@
       "args": [
         "--project=.",
         "-e",
-        "using Weave; Weave.weave(ENV[\"JMD_IN\"], out_path=\"$(pwd())/build\", doctype=\"pandoc\")"
+        "using Pkg; Pkg.activate(\".\"); using Weave; Weave.weave(ENV[\"JMD_IN\"], out_path=\"$(pwd())/build\", doctype=\"pandoc\")"
       ],
       "options": {
         "env": {
