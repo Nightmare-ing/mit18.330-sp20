@@ -593,7 +593,7 @@ plot!(xs, exp, label=L"\exp")
 ylims!(0, 30)
 ```
 
-### Problem 6
+l**Problem 6:**
 
 Make an interactive visualization of the Taylor polynomial approximation to $\log(1+x)$, showing visually that it fails outside a certain interval. Which interval is that, and why?
 
@@ -626,10 +626,10 @@ plot!(ys, x -> log(1 + x), label=L"\log")
 
 That interval is $(-1, 1]$, because when $x \leq -1$, $\log(1 + x)$ is undefined, and when $x > 1$, the Taylor series diverges.
 
-#### Exercise 5: Exactly representing irrationals using symbolic computing
+## Exercise 5: Exactly representing irrationals using symbolic computing
 
-Here we will represent certain real numbers in the computer
-_exactly_. Effectively we will use a type of _symbolic_ computation, in which we explicitly keep
+Here we will represent certain real numbers in the computer _exactly_.
+Effectively we will use a type of _symbolic_ computation, in which we explicitly keep
 the symbol $\sqrt{2}$, rather than approximating it by a floating-point number.
 
 (Although this is not really the subject of the course, it's useful to remember
@@ -640,25 +640,113 @@ commercial tool to do this!)
 Consider the subset of the real numbers given by $S := \{a + b\sqrt{2}: a, b \in \mathbb{Q} \}$,
 i.e. the set of numbers of the form $a + b\sqrt{2}$ where $a$ and $b$ are rational.
 
-1. Write down formulae for the sum, difference and product of $a_1 + b_1\sqrt{2}$
-   and $a_2 + b_2 \sqrt{2}$, showing that the results are in $S$.
+### Problem 1
 
-2. Show that $1 / (a + \sqrt{b})$ is also in $S$ by supposing that it
-   equals $c + d \sqrt{2}$ and finding explicit equations for $c$ and $d$.
-   What type of equations are they? Solve them to find explicit values for $c$ and $d$
-   in terms of $a$ and $b$.
+Write down formulae for the sum, difference and product of $a_1 + b_1\sqrt{2}$
+and $a_2 + b_2 \sqrt{2}$, showing that the results are in $S$.
 
-   [This shows that we can also do division (by non-zero elements) and remain
-   within the set, i.e. that $S$ is a **field**, namely an **extension field** of
-   $\mathbb{Q}$. ]
+**Answer:**
 
-3. Define a type `FieldExtension` to represent these number pairs, and
-   the corresponding operations. Also define a `show` method to print them nicely
-   using a `√` symbol (typed as `\sqrt<TAB>`).
+For the sum
 
-4. [Extra credit]: What happens if you adjoin $\sqrt{2}$ and $\sqrt{3}$?
-   Find formulae to represent $1 / (1 + \sqrt{2} + \sqrt{3})$ as elements of the
-   corresponding set.
+$$
+(a_1 + b_1 \sqrt{2}) + (a_2 + b_2 \sqrt{2}) = (a_1 + a_2) + (b_1 + b_2) \sqrt{2}
+$$
+
+Because $a_1 + a_2 \in \mathbb{Q}$ and $b_1 + b_2 \in \mathbb{Q}$, the sum is in $S$.
+
+The difference is similar to the sum.
+For the product
+
+$$
+(a_1 + b_1 \sqrt{2}) (a_2 + b_2 \sqrt{2}) = (a_1 a_2 + 2 b_1 b_2) + (a_1 b_2 + a_2 b_1) \sqrt{2}
+$$
+
+Because $a_1 a_2 + 2 b_1 b_2 \in \mathbb{Q}$ and $a_1 b_2 + a_2 b_1 \in \mathbb{Q}$, the product is in $S$.
+
+### Problem 2
+
+Show that $1 / (a + \sqrt{b})$ is also in $S$ by supposing that it equals
+$c + d \sqrt{2}$ and finding explicit equations for $c$ and $d$.
+What type of equations are they? Solve them to find explicit values for $c$ and $d$
+in terms of $a$ and $b$.
+
+[This shows that we can also do division (by non-zero elements) and remain
+within the set, i.e. that $S$ is a **field**, namely an **extension field** of
+$\mathbb{Q}$. ]
+
+**Answer:**
+
+Suppose
+
+$$
+\frac{1}{a + b \sqrt{2}} = c + d \sqrt{2}
+$$
+
+Then
+
+$$
+1 = (a + b \sqrt{2})(c + d \sqrt{2}) \implies (ac + 2 bd) + (ad + bc) \sqrt{2} = 1
+$$
+
+Because $a \in \mathbb{Q}$ and $b \in \mathbb{Q}$, $ac + 2bd$ and $ad + bc$ are also in $\mathbb{Q}$, thus
+
+$$
+\begin{cases}
+    ac + 2 bd = 1 \\
+    ad + bc = 0
+\end{cases} \implies
+\begin{cases}
+    c = \frac{a}{a^2 - 2 b^2} \\
+    d = \frac{-b}{a^2 - 2 b^2}
+\end{cases}
+$$
+
+### Problem 3
+
+Define a type `FieldExtension` to represent these number pairs, and
+the corresponding operations.
+Also define a `show` method to print them nicely using a `√` symbol (typed as `\sqrt<TAB>`).
+
+**Answer:**
+
+```julia; results = "hidden"
+struct FieldExtension
+    a::Rational
+    b::Rational
+end
+
+import Base: +, -, *, /
++(x::FieldExtension, y::FieldExtension) = FieldExtension(x.a + y.a, x.b + y.b)
+-(x::FieldExtension, y::FieldExtension) = FieldExtension(x.a - y.a, x.b - y.b)
+*(x::FieldExtension, y::FieldExtension) = FieldExtension(x.a * y.a + 2 * x.b * y.b, x.a * y.b + x.b * y.a)
+/(x::FieldExtension, y::FieldExtension) = x * FieldExtension(y.a / (y.a^2 - 2 * y.b^2), -y.b / (y.a^2 - 2 * y.b^2))
+Base.show(io::IO, x::FieldExtension) = print(io, x.a, " + ", x.b, "×√2")
+```
+
+### Problem 4
+
+[Extra credit]: What happens if you adjoin $\sqrt{2}$ and $\sqrt{3}$?
+Find formulae to represent $1 / (1 + \sqrt{2} + \sqrt{3})$ as elements of the
+corresponding set.
+
+**Answer:**
+
+We can find that extension field is
+
+$$
+S := \{a + b\sqrt{2} + c\sqrt{3} + d\sqrt{6}: a, b, c, d \in \mathbb{Q} \}
+$$
+
+And we can simplify $1 / (1 + \sqrt{2} + \sqrt{3})$ as follows
+
+$$
+\begin{align}
+    \frac{1}{1 + \sqrt{2} + \sqrt{3}} &= \frac{(1 + \sqrt{2}) - \sqrt{3}}{[(1 + \sqrt{2}) + \sqrt{3}][(1 + \sqrt{2}) - \sqrt{3}]} \\
+    &= \frac{(1 + \sqrt{2}) - \sqrt{3}}{2\sqrt{2}} \\
+    &= \frac{1}{2} + \frac{1}{4} \sqrt{2} - \frac{1}{4} \sqrt{6}
+\end{align}
+$$
 
 ## Some Julia tips
 
