@@ -132,10 +132,8 @@ Which algorithm is more efficient and by how much?
 
 ```julia
 a = collect(1:10)
-b_hor = @benchmark horner(a, 1)
-b_p = @benchmark p(a, 1)
-println("Horner: ", minimum(b_hor).time)
-println("Naive: ", minimum(b_p).time)
+@btime horner(a, 1)
+@btime p(a, 1)
 ```
 
 The Horner method is more efficient by almost a half
@@ -495,7 +493,8 @@ Note: WebIO.jl has a compatibility issue with current versions of Julia, so use 
 
 **Answer:**
 
-```julia; results = "hidden"
+```julia; eval = false
+# each statement needs to be in different cells
 using Plots, PlutoUI
 
 @bind N Slider(1:20, default=6)
@@ -514,7 +513,7 @@ How does it behave?
 
 **Answer:**
 
-```julia; results = "hidden"
+```julia; eval = false
 plot(xs, x -> exp(x) - exp_N(x, N), label=L"\exp - \exp_N")
 ```
 
