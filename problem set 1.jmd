@@ -802,6 +802,8 @@ Later plots will be quick.
 
 ### Interactivity
 
+> [!Note] `WebIO.jl` has a compatibility issue with current versions of Julia, so use Pluto.jl for interactive visualizations.
+
 The `Interact.jl` package enables us to generate simple interactive visualizations
 using a slider (and some other "widgets").
 
@@ -815,7 +817,7 @@ end
 
 To manipulate a plot, put a plot as the result at the end of the `for` loop:
 
-```julia
+```julia; eval = false
 @manipulate for i in 1:10
     plot(-5:0.01:5, x -> sin(i * x))
 end
@@ -823,7 +825,7 @@ end
 
 You can generate multiple sliders by using a joint `for` loop:
 
-```julia
+```julia; eval = false
 @manipulate for i in 1:10, j in 0.1:0.1:0.9
     i + j
 end
