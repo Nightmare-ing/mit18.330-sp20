@@ -752,18 +752,16 @@ $$
 
 ### Package installation
 
-A package such as `BenchmarkTools` may be installed
-by running the following code a _single_ time (only once in your
-current Julia installation):
+A package such as `BenchmarkTools` may be installed by running the following code a _single_ time (only once in your current Julia installation):
 
-```julia
+```julia; eval = false
 using Pkg
 Pkg.add("BenchmarkTools")
 ```
 
 Load the package in each Julia session with
 
-```julia
+```julia; eval = false
 using BenchmarkTools
 ```
 
@@ -772,18 +770,18 @@ using BenchmarkTools
 Simple benchmarking (i.e. timing how long an operation takes) may be done using the
 `@time` macro:
 
-    ```julia
-    @time f(x)
-    ```
+```julia; eval = false
+@time f(x)
+```
 
 However, if the time taken is too short then this is not accurate.
 Instead, use the `BenchmarkTools.jl` package, with the syntax
 
-    ```julia
-    using BenchmarkTools
+```julia; eval = false
+using BenchmarkTools
 
-    @btime f(1, $x)
-    ```
+@btime f(1, $x)
+```
 
 Note that any variables you pass in must be given `$` signs like this.
 
@@ -792,17 +790,11 @@ Note that any variables you pass in must be given `$` signs like this.
 The `Plots.jl` package is used as follows after loading it with `using Plots`:
 
 - `plot(x, y)`: plots the data with given $x$ coordinates and $y$ coordinates,
-  joining those points with lines.
-  These should be vectors.
-
+  joining those points with lines. These should be vectors.
 - `plot(y)`: specifying only one argument plots the data against the numbers $1, 2, \ldots$
-
 - `plot(-1:0.1:1, f)`: you may pass in a range and a function instead of data.
-
 - `plot!`: adding `!` adds a new plot to an existing one.
-
 - `scatter`: plots points instead of lines
-
 - Add `yscale=:log10` inside the plotting command to use a logarithmic scale
   on the $y$ axis.
 
@@ -816,7 +808,7 @@ using a slider (and some other "widgets").
 
 To generate a single slider, wrap a `for` loop in the `@manipulate` macro, e.g.
 
-```julia
+```julia; eval = false
 @manipulate for i in 1:10
     i^2
 end
