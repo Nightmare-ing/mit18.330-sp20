@@ -1,0 +1,697 @@
+---
+title: 18.330 Problem set 1(sprint 2020)
+engine: julia
+format: html
+editor:
+    render-on-save: true
+theme: Antibes
+mainfont: Helvetica
+monofont: "Source Code Pro"
+monofontoptions: "Scale=0.6"
+---
+
+```{julia}
+#| outputs: false
+ENV["GKSwstype"] = "nul" # don't open figure window
+using Plots, LaTeXStrings, BenchmarkTools, LinearAlgebra
+```
+
+```{ojs}
+import { tex } from "@observablehq/tex"
+```
+
+## Submission deadline: 11:59pm on Monday, February 10
+
+The questions are a mixture of hand / analytical calculation
+and numerical calculation using Julia. You should submit a PDF file.
+You may photograph / scan your handwritten solutions for the theory parts,
+or (preferably) type them up as part of a Jupyter notebook that you print to PDF.
+
+## Exercise 1: Evaluating polynomials
+
+Consider the polynomial function
+
+$$
+p(a, x) = a_0 + a_1 x + \cdots + a_n x^n
+$$
+
+### Problem 1
+
+Write a function `poly_eval(a, x)` to evaluate $p(a, x)$ in the naive way by just summing the terms
+as written. This should accept the coefficients $a_0, \ldots, a_n$ as a vector.
+
+**Answer:**
+
+```{julia}
+function p(a, x)
+    sum = 0.0
+   for (index, a_item) in pairs(a)
+        sum += a_item * x^(index - 1)
+    end
+    return sum
+end;
+```
+
+```{julia}
+a = [1, 2, 3, 4]
+x = 0.5
+p(a, x)
+```
+
+### Problem 2
+
+The **Horner method** is an alternative evaluation algorithm in which no
+powers of $x$ are (explicitly) calculated.
+
+For example, for a quadratic
+$p(x) = a_2 x^2 + a_1 x + a_0$ we have
+$p(x) = a_0 + x(a_1 + a_2 x)$
+
+Generalise this to polynomials of degree $3$ and then degree $n$
+
+**Answer:**
+
+For polynomials of degree $3$,
+
+$$
+p(x) = a_0 + x[a_1 + x(a_2 + a_3x)]
+$$
+
+For polynomials of degree $n$
+
+$$
+p(x) = a_0 + x(a_1 + x(a_2 + x(a_3 + x(\cdots + x(a_{n-1} + a_n x)))))
+$$
+
+### Problem 3
+
+Implement this as a function `horner(a, x)`.
+
+**Answer:**
+
+Express the formula in a more uniform way
+
+$$
+p(x) = a_0 + x(a_1 + x(a_2 + x(a_3 + x(\cdots + x(a_{n-1} + x(a_n + 0))))))
+$$
+
+Then we can use for-loop to calculate this easily
+
+```{julia}
+#| outputs: false
+function horner(a, x)
+    res = 0.0
+    for a_item in Iterators.reverse(a)
+        res = a_item + x * res
+    end
+    return res
+end;
+```
+
+```{julia}
+horner(a, x)
+```
+
+### Problem 4
+
+Test `horner` to make sure it gives the same result as `poly_eval`.
+
+**Answer:**
+
+```{julia}
+for x in 0:0.01:10
+    horner_res = horner(a, x)
+    p_res = p(a, x)
+    if !isapprox(horner_res, p_res)
+        error("Different result! Horner result is: $(horner_res), p res is: $(p_res)")
+    end
+end
+println("Same Results in 0:0.01:10")
+```
+
+### Problem 5
+
+Benchmark the two methods to evaluate the polynomial $p(a, x) = 1 + 2x + 3x^2 + \cdots + 10x^{10}$.
+Which algorithm is more efficient and by how much?
+
+**Answer:**
+
+```{julia}
+a = collect(1:10)
+@btime horner(a, 1)
+@btime p(a, 1);
+```
+
+The Horner method is more efficient by almost a half
+
+### Problem 6
+
+Count (approximately) the number of operations required by each of the two algorithms.
+Does this agree with your benchmarks? (Feel free to perform more benchmarks to check this, e.g. using polynomials with random coefficients.)
+
+**Answer:**
+
+With the naive way, for each item in the vector `a`, we have to do summation and multiplication,
+the number of multiplacation depends on the order.
+Thus the number of operations required is
+
+$$
+1 + 2 + 3 + \cdots + (n + 1) = \frac{(n + 2)(n + 1)}{2} = \Theta(n^2)
+$$
+
+Or maybe power computation is of order $\Theta(log n)$
+
+With the Horner method, for each item we just have to do one multiplication and summation.
+Thus the number of operations required is
+
+$$
+\Theta(n) = n
+$$
+
+To check this, consider `a` which has large enough length
+
+```{julia}
+function run_times(f, a_maxlen, x)
+    res_vec = []
+    for len in 1:a_maxlen
+        a = collect(1:len)
+        b = @benchmark $f($a, $x)
+        push!(res_vec, minimum(b).time)
+    end
+    return res_vec
+end;
+```
+
+```{julia}
+#| eval: false
+a_maxlen = 10
+x = 0.5
+p_vec = run_times(p, a_maxlen, x)
+horner_vec = run_times(horner, a_maxlen, x)
+
+scatter(p_vec, label="Naive Method", xlabel="Length of a", ylabel="time (ns)")
+scatter!(horner_vec, label="Horner Method")
+```
+
+## Exercise 2: Calculating $\sqrt{y}$
+
+The Babylonian algorithm for calculating $x = \sqrt{y}$ is the following iteration:
+
+$$
+x_{n+1} = \frac{1}{2} \left( x_n + \frac{y}{x_n} \right)
+$$
+
+### Problem 1
+
+_Suppose_ that $x_n$ converges to some limiting value $x^*$ as $n \to \infty$. Show that
+then we must have $x^* = \sqrt{y}$.
+
+**Answer:**
+
+$$
+\lim_{n \to \infty} x_{n + 1} = \lim_{n \to \infty} \frac{1}{2} (x_n + \frac{y}{x_n})
+$$
+
+Because
+
+$$
+\lim_{n \to \infty} x_{n + 1} = \lim_{n \to \infty} x_{n} = x^*
+$$
+
+then
+
+$$
+x^* = \frac{1}{2} (x^* + \frac{y}{x^*}) \implies x^* = \sqrt{y}
+$$
+
+### Problem 2
+
+To show that it does, in fact, converge, suppose (without loss of generality) that $x_0 < \sqrt{y}$.
+
+Show that we then have $x_n < x_{n+1} < y$ for all $n$. Hence the $x_n$ form an increasing sequence that is bounded above, and hence they converge.
+(This is a [theorem](https://en.wikipedia.org/wiki/Monotone_convergence_theorem) that we will just assume for this course.)
+
+**Answer:**
+
+If $x_n > \sqrt{y}$, then
+
+$$
+x_{n + 1} = \frac{1}{2}(\frac{y}{x_n} + x_n) > \sqrt{y}
+$$
+
+We know $x_0 < \sqrt{y}$, then
+
+$$
+x_1 = \frac{1}{2}(\frac{y}{x_0} + x_0) > \sqrt{y}
+$$
+
+Then $x_n > \sqrt{y}$ for $n \geq 2$. Consider
+
+$$
+x_{n + 1} - x_n = \frac{1}{2} (\frac{y}{x_n} - x_n) < 0 \implies x_{n + 1} < x_n
+$$
+
+Thus $\sqrt{y} < x_{n + 1} < x_n$, and $x_n$ converges.
+
+So there's an error in the problem, $x_n$ decreases since $n \geq 2$, but always greater than $\sqrt{y}$
+
+### Problem 3
+
+Write a function `babylon` that implements this algorithm. It takes a tolerance $\epsilon$ and iterates
+until the residual is $< \epsilon$. It should return the sequence $(x_n)$.
+
+**Answer:**
+
+```{julia}
+function babylon(y, ϵ)
+    xs = [Float64(y)]
+    while true
+        x_curr = 1 / 2 * (xs[end] + y / xs[end])
+        if abs(x_curr - xs[end]) < ϵ
+            break
+        end
+        push!(xs, x_curr)
+    end
+    return xs
+end;
+```
+
+### Problem 4
+
+Test your function to make sure it gives the correct result.
+
+**Answer:**
+
+```{julia}
+passFlag = true
+for i in 1:20
+    if !isapprox(sqrt(i), babylon(i, 1e-6)[end], atol=1e-6)
+        error("Failed test with $(i): $(sqrt(i)), $(babylon(i, 1e-5)[end])")
+        passFlag = false
+        break
+    end
+end
+
+if passFlag
+    println("PASS ALL TESTS!")
+end
+```
+
+### Problem 5
+
+Use rational initial values to convince yourself that calculating with rationals is a bad idea
+and that floating point is a good compromise.
+
+**Answer:**
+
+```{julia}
+function rationalBabylon(y, ϵ)
+    xs = [y]
+    while true
+        x_curr = 1 / 2 * (xs[end] + y / xs[end])
+        if abs(x_curr - xs[end]) < ϵ
+            break
+        end
+        push!(xs, x_curr)
+    end
+    return xs
+end;
+```
+
+```{julia}
+rationalBabylon(3 // 4, 1e-2)
+```
+
+### Problem 6
+
+For rational initial values, we can only reach $1 \times 10^{-2}$, if we reach precision $1 \times 10^{-3}$, we'll get overflow error.
+
+Let $\delta_n := x_n - x^{*}$ be the distance of $x_n$ from the limiting value $\sqrt{y}$. (You may use Julia's built-in `sqrt` function, or take the last data value as the limit.)
+
+Plot the (absolute value of) $\delta_n$ as a function of $n$ on a suitable combination of linear and log scales. How fast does it seem to be converging?
+
+**Answer:**
+
+```{julia}
+y = 2
+δ_n = abs.(babylon(y, 1e-10) .- sqrt(y))
+p1 = scatter(δ_n)
+p2 = scatter(δ_n, yscale=:log10)
+plot(p1, p2, layout=(1, 2))
+```
+
+It seems to converge with
+
+$$
+\log_{10}\delta_n = a x^2 + bx + c \implies \delta_n = e^{Ax^2 + Bx + C}
+$$
+
+### Problem 7
+
+Compare this on the same plot to the bisection algorithm from class. Which is better?
+
+This one is better, because in the log scale, the bisection algorithm converges at a linear scale.
+For Babylon algorithm, it converges at a quadratic scale.
+
+### Problem 8
+
+With $\delta_n$ defined as in Problem 6, show that $\delta_{n+1} \simeq \delta_n^2$ ($\simeq$ means "is approximately equal to").
+
+Hint: you may need to use a Taylor series expansion; if so you should calculate this (by hand).
+
+Replace $x_n$ and $x_{n + 1}$ in the iteration with the following formula
+
+$$
+x_n = \delta_n + x^*
+$$
+
+Then
+
+$$
+\delta_{n + 1} + x^* = \frac{1}{2}\left(\delta_n + x^* + \frac{y}{\delta_n + x^*}\right)
+$$
+
+We know $x^* = \sqrt{y}$, thus
+
+$$
+\begin{align*}
+\delta_{n + 1} + x^* = \frac{1}{2}\left(\delta_n + x^* + \frac{x^{*2}}{\delta_n + x^*}\right) \\
+\delta_{n + 1} = \frac{1}{2} \left(\delta_n - x^* + \frac{x^{*2}}{\delta_n + x^*}\right) \\
+\implies \delta_{n + 1} = \frac{1}{2} \frac{\delta_n^2}{\delta_n + x^*}
+\end{align*}
+$$
+
+As $n \to \infty$, $\delta_n \to 0$, thus
+
+$$
+\delta_{n + 1} = \frac{1}{2x^*} \delta_n^2 \implies \delta_{n + 1} \simeq \delta_n^2
+$$
+
+## Exercise 3: Collision of two discs
+
+In this question we will finally find an actual use case for solving a quadratic equation!
+
+Suppose we have two discs located at positions $\mathbf{x}_1$
+and $\mathbf{x}_2$, with velocities $\mathbf{v}_1$ and $\mathbf{v}_2$,
+respectively. The discs each have radius $r$.
+
+### Problem 1
+
+Find an expression for the condition that the discs collide (i.e. are touching)
+at time $t$, involving the distance between their centres.
+
+**Answer:**
+
+$$
+\lvert (\mathbf{x}_1 + t \mathbf{v}_1) - (\mathbf{x}_2 + t \mathbf{v}_2) \rvert = 2r
+$$
+
+### Problem 2
+
+Rewrite your expression from Problem 1 as a quadratic equation for the time $t$.
+How many real solutions may this equation have?
+What do different numbers of solutions of this equation correspond to physically?
+
+**Answer:**
+
+We have
+
+$$
+\lvert (\mathbf{x}_1 - \mathbf{x}_2) + t (\mathbf{v}_1 - \mathbf{v}_2) \rvert^2 = 4r^2
+$$
+
+Express this in linear algebra form
+
+$$
+\begin{align*}
+    &[(\mathbf{x}_1 - \mathbf{x}_2) + t (\mathbf{v}_1 - \mathbf{v}_2)]^T [(\mathbf{x}_1 - \mathbf{x}_2) + t (\mathbf{v}_1 - \mathbf{v}_2)] = 4r^2 \\
+    &[(\mathbf{x}_1 - \mathbf{x}_2)^T + t (\mathbf{v}_1 - \mathbf{v}_2)^T] [(\mathbf{x}_1 - \mathbf{x}_2) + t (\mathbf{v}_1 - \mathbf{v}_2)] = 4r^2 \\
+    &(\mathbf{v}_1 - \mathbf{v}_2)^T (\mathbf{v}_1 - \mathbf{v}_2) t^2 + 2 (\mathbf{x}_1 - \mathbf{x}_2)^T (\mathbf{v}_1 - \mathbf{v}_2) t + (\mathbf{x}_1 - \mathbf{x}_2)^T (\mathbf{x}_1 - \mathbf{x}_2) - 4r^2 = 0
+\end{align*}
+$$
+
+Thus this equation has at most two real solutions.
+If there are two real solutions, it means the discs collide and then continue to move and separate, at the separate point they touch again.
+If there is one real solution, it means the discs just touch at one point and then separate.
+If there is no real solution, it means the discs never collide.
+
+### Problem 3
+
+Write a function `collision` that takes all the data and calculates the collision time by using the quadratic formula.
+Make sure you take account of the answer to Problem 2.
+
+**Answer:**
+
+```{julia}
+function collision(x1, x2, v1, v2, r)
+    a = (v1 - v2) ⋅ (v1 - v2)
+    b = 2 * (v1 - v2) ⋅ (x1 - x2)
+    c = (x1 - x2) ⋅ (x1 - x2) - 4 * r^2
+    Δ = b^2 - 4 * a * c
+    if Δ < 0 || a == 0
+        println("NO COLLISION TIME!")
+        return 
+    elseif Δ == 0
+        return -b / 2 / a
+    else
+        return (-b + sqrt(Δ)) / 2 / a, (-b - sqrt(Δ)) / 2 / a
+    end
+end;
+```
+
+Check that your code works by setting up some combinations of discs
+where you can do the calculation by hand (e.g. both discs moving at a 45-degree angle).
+
+**Answer:**
+
+```{julia}
+if (res = collision([0.0, 0.0], [6.0, 0.0], [0.0, 1.0], [0.0, -1.0], 1)) != nothing
+    println(res)
+end
+
+if (res = collision([0.0, 0.0], [6.0, 0.0], [1.0, 0], [-1.0, 0], 1)) != nothing
+    println(res)
+end
+
+if (res = collision([0.0, 2.0], [6.0, 0.0], [0.0, 0.0], [-1.0, 0.0], 1)) != nothing
+    println(res)
+end
+
+if (res = collision([0.0, 0.0], [6.0, 0.0], [0.0, 1.0], [0.0, 1.0], 1)) != nothing
+    println(res)
+end
+```
+
+## Exercise 4: Evaluating elementary functions
+
+### Problem 1
+
+Implement the degree-$N$ Taylor polynomial approximation $\exp_N(x)$ for $\exp(x)$ around $x=0$.
+Make sure that you do _not_ explicitly calculate factorials in your code.
+
+**Answer:**
+
+```{julia}
+function exp_N(x, N)
+    sum = 1.0
+    item = 1.0
+    for n in 1:N
+        item = item / n * x
+        sum += item
+    end
+    return sum
+end;
+```
+
+### Problem 2
+
+Make an interactive visualization using the `Interact.jl` package,
+showing $\exp_N$ and $\exp$ as $N$ varies.
+
+Note: WebIO.jl has a compatibility issue with current versions of Julia, so use OJS in Quarto
+
+**Answer:**
+
+```{julia}
+x_vals = 0:0.01:5
+y_vals = exp.(x_vals)
+exp_data = Dict(
+    "x" => x_vals,
+    "y" => y_vals
+)
+
+N_max = 15
+expN_data = [Dict("x" => x_vals, "y" => exp_N.(x_vals, n)) for n in 0:N_max]
+ojs_define(exp_data = exp_data, expN_data = expN_data, N_max = N_max)
+```
+
+```{ojs}
+//| code-fold: true
+//| code-summary: "Click to see the ploting code"
+viewof N = Inputs.range([0, N_max], {
+    value: 6,
+    step: 1,
+    label: "N"
+});
+exp_trans = transpose(exp_data).map(d => ({ ...d, series: "True Vals" }));
+expN_trans = transpose(expN_data[N]).map(d => ({ ...d, series: "Approx Vals" }));
+Plot.plot({
+    grid: true,
+    color: {
+        legend: true
+    },
+    marks: [
+        Plot.line(exp_trans,
+            { x: "x", y: "y", stroke: "series"},
+        ),
+        Plot.line(expN_trans,
+            { x: "x", y: "y", stroke: "series"},
+        )
+    ]
+})
+```
+
+### Problem 3
+
+Make another visualization showing the **truncation error**, i.e. $\exp(x) - \exp_N(x)$.
+How does it behave?
+
+**Answer:**
+
+```{julia}
+delta_data = copy(expN_data)
+for gp in delta_data
+    gp["y"] = abs.(gp["y"] - exp.(x_vals))
+end
+ojs_define(delta = delta_data)
+```
+
+```{ojs}
+//| code-fold: true
+//| code-summary: "Click to see the ploting code"
+delta_trans = transpose(delta[N]).map(d => ({ ...d, series: "Delta Vals"}));
+Plot.plot({
+    grid: true,
+    color: {
+        legend: true
+    },
+    y: {
+        type: "log",
+        tickFormat: ".0e",
+    },
+    marks: [
+        Plot.line(delta_trans,
+            { x: "x", y: "y", stroke: "series"}
+        )
+    ]
+})
+```
+
+### Problem 4
+
+Calculate a bound for the truncation error using the Lagrange remainder.
+Use [Stirling's approximation](https://en.wikipedia.org/wiki/Stirling%27s_approximation)
+to estimate how many terms you need to take for the error to be of a certain size $\epsilon$.
+
+**Answer:**
+
+The Lagrange remainder is
+
+$$
+R_{N}(f, x) = \frac{f^{(n + 1)}(\xi)}{(n + 1)!}(x - a)^{n + 1}, \quad \xi \in [a, x]
+$$
+
+For $f(x) = \exp(x)$, we have
+
+$$
+\begin{align}
+    R_{N}(\exp, x) = \frac{e^{\xi}}{(n + 1)!} x^{n + 1}, \quad \xi \in [0, x] \\
+    \lvert R_{N}(\exp, x) \rvert \leq \frac{e^{x}}{(n + 1)!} x^{n + 1}
+\end{align}
+$$
+
+Stirling's approximation gives
+
+$$
+n! \sim \sqrt{2 \pi n} \left(\frac{n}{e}\right)^n
+$$
+
+Thus to make the error less than $\epsilon$, we need
+
+$$
+\frac{e^{x}}{(n + 1)!} x^{n + 1} < \epsilon
+$$
+
+### Problem 5
+
+Implement **range reduction** for the exponential function: instead of blindly applying a
+Taylor expansion (which will require many terms for large $x$), calculate $\exp(x)$ by
+reducing to the calculation of $\exp(r)$ for $r \in [-0.5, 0.5]$ using the relation
+
+$$
+\exp(2x) = \exp(x)^2
+$$
+
+**Answer:**
+
+$$
+\left\lvert \frac{x}{2^k} \right\rvert \leq 0.5 \implies k \geq \log_2 \lvert x \rvert + 1
+$$
+
+Thus we can implement `exp_reduction` as follows
+
+```{julia}
+function exp_reduction(x, N)
+    k = 0.0
+    if x > 0.5 || x < -0.5
+        k = 1 + round(log2(abs(x)))
+    end
+    x_reduced = x / 2^k
+    return exp_N(x_reduced, N)^(2^k)
+end;
+```
+
+And we can compare this with `exp_N`
+
+```{julia}
+N = 3
+xs = -5:0.01:5
+plot(xs, x -> exp_N(x, N), label=L"\exp_N")
+plot!(xs, x -> exp_reduction(x, N), label=L"\exp_N \ with\ range\ reduction")
+plot!(xs, exp, label=L"\exp")
+ylims!(0, 30)
+```
+
+**Problem 6:**
+
+Make an interactive visualization of the Taylor polynomial approximation to $\log(1+x)$, showing visually that it fails outside a certain interval. Which interval is that, and why?
+
+**Answer:**
+
+Taylor polynomial approximation to $\log(1 + x)$ around $x = 0$ is
+
+$$
+\log(1 + x) = x - \frac{x^2}{2} + \frac{x^3}{3} - \frac{x^4}{4} + \cdots
+$$
+
+```{julia}
+function log_N(x, N)
+    item = x
+    sum = x
+    for i in 2:N
+        item = item * x * (-1) * (i - 1) / i
+        sum += item
+    end
+    return sum
+end;
+```
+
+```{julia}
+N = 7
+ys = -1:0.01:1
+plot(ys, x -> log_N(x, N), label=L"\log_N")
+plot!(ys, x -> log(1 + x), label=L"\log")
+```
+
+That interval is $(-1, 1]$, because when $x \leq -1$, $\log(1 + x)$ is undefined, and when $x > 1$, the Taylor series diverges.
+
